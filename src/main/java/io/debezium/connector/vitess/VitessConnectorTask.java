@@ -37,6 +37,7 @@ import io.debezium.pipeline.DataChangeEvent;
 import io.debezium.pipeline.ErrorHandler;
 import io.debezium.pipeline.EventDispatcher;
 import io.debezium.pipeline.metrics.DefaultChangeEventSourceMetricsFactory;
+import io.debezium.pipeline.monitor.OffsetActivityMonitorServiceProvider;
 import io.debezium.pipeline.notification.NotificationService;
 import io.debezium.pipeline.spi.Offsets;
 import io.debezium.processors.PostProcessorRegistryServiceProvider;
@@ -264,5 +265,6 @@ public class VitessConnectorTask extends BaseSourceTask<VitessPartition, VitessO
         serviceRegistry.registerServiceProvider(new DebeziumHeaderProducerProvider());
         serviceRegistry.registerServiceProvider(new CustomConverterServiceProvider());
         serviceRegistry.registerServiceProvider(new QueueProviderServiceProvider());
+        serviceRegistry.registerServiceProvider(new OffsetActivityMonitorServiceProvider());
     }
 }

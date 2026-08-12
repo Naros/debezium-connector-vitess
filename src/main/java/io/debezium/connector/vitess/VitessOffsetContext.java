@@ -80,6 +80,10 @@ public class VitessOffsetContext extends CommonOffsetContext<SourceInfo> {
         return sourceInfo.getRestartVgtid();
     }
 
+    public Vgtid getCurrentVgtid() {
+        return sourceInfo.getCurrentVgtid();
+    }
+
     public void setShard(String shard) {
         sourceInfo.setShard(shard);
     }
