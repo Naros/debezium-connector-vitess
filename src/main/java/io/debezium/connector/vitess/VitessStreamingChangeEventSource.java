@@ -6,6 +6,7 @@
 package io.debezium.connector.vitess;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.slf4j.Logger;
@@ -19,6 +20,8 @@ import io.debezium.connector.vitess.connection.ReplicationMessageProcessor;
 import io.debezium.connector.vitess.pipeline.txmetadata.VitessTransactionInfo;
 import io.debezium.pipeline.ErrorHandler;
 import io.debezium.pipeline.EventDispatcher;
+import io.debezium.pipeline.monitor.OffsetActivityMonitor;
+import io.debezium.pipeline.monitor.OffsetActivityMonitorService;
 import io.debezium.pipeline.source.spi.StreamingChangeEventSource;
 import io.debezium.relational.TableId;
 import io.debezium.schema.SchemaChangeEvent;
@@ -40,6 +43,8 @@ public class VitessStreamingChangeEventSource implements StreamingChangeEventSou
     private final VitessConnectorConfig connectorConfig;
     private final ReplicationConnection replicationConnection;
     private final DelayStrategy pauseNoMessage;
+    private final OffsetActivityMonitorService offsetActivityMonitorService;
+    private OffsetActivityMonitor<VitessPartition, VitessOffsetContext> offsetActivityMonitor;
 
     public VitessStreamingChangeEventSource(
                                             EventDispatcher<VitessPartition, TableId> dispatcher,
@@ -55,6 +60,7 @@ public class VitessStreamingChangeEventSource implements StreamingChangeEventSou
         this.connectorConfig = connectorConfig;
         this.replicationConnection = replicationConnection;
         this.pauseNoMessage = DelayStrategy.constant(connectorConfig.getPollInterval());
+        this.offsetActivityMonitorService = OffsetActivityMonitorService.lookup(connectorConfig.getServiceRegistry());
 
         LOGGER.info("VitessStreamingChangeEventSource is created");
     }
@@ -92,9 +98,21 @@ public class VitessStreamingChangeEventSource implements StreamingChangeEventSou
         }
     }
 
+    @Override
+    public Optional<OffsetActivityMonitor<VitessPartition, VitessOffsetContext>> getOffsetActivityMonitor() {
+        if (offsetActivityMonitor == null) {
+            offsetActivityMonitor = new VitessOffsetActivityMonitor(connectorConfig.getOffsetActivityMonitorInterval());
+        }
+        return Optional.of(offsetActivityMonitor);
+    }
+
     private ReplicationMessageProcessor newReplicationMessageProcessor(VitessPartition partition,
                                                                        VitessOffsetContext offsetContext) {
         return (message, newVgtid) -> {
+            // Invoked on the gRPC response thread; the monitor is registered on the coordinator
+            // thread before streaming is started, so it is safely published by the thread start
+            offsetActivityMonitorService.pulse(partition, offsetContext);
+
             if (message.isTransactionalMessage()) {
                 // Tx BEGIN/COMMIT event
                 if (message.getOperation() == ReplicationMessage.Operation.BEGIN) {
