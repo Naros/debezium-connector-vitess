@@ -69,7 +69,7 @@ public class VitessConnectorTaskTest {
         task.initialize(helper.getSourceTaskContext());
         task.preStart(config);
         ChangeEventSourceCoordinator coordinator = task.start(config);
-        assertThat(vitessLogInterceptor.containsMessage("No previous offset found")).isTrue();
+        assertThat(logInterceptor.containsMessage("No previous offsets found")).isTrue();
     }
 
     @Test
