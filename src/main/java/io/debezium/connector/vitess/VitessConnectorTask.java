@@ -90,7 +90,7 @@ public class VitessConnectorTask extends BaseSourceTask<VitessPartition, VitessO
 
         schema = new VitessDatabaseSchema(connectorConfig, schemaNameAdjuster, topicNamingStrategy, customConverterRegistry, taskContext);
 
-        Offsets<VitessPartition, VitessOffsetContext> previousOffsets = getPreviousOffsets(new VitessPartition.Provider(connectorConfig),
+        Offsets<VitessPartition, VitessOffsetContext> previousOffsets = getSinglePartitionPreviousOffsets(new VitessPartition.Provider(connectorConfig),
                 new VitessOffsetContext.Loader(connectorConfig));
         final VitessOffsetContext previousOffset = previousOffsets.getTheOnlyOffset();
         final Clock clock = Clock.system();
@@ -107,10 +107,7 @@ public class VitessConnectorTask extends BaseSourceTask<VitessPartition, VitessO
         final SnapshotterService snapshotterService = connectorConfig.getServiceRegistry().tryGetService(SnapshotterService.class);
 
         try {
-            if (previousOffset == null) {
-                LOGGER.info("No previous offset found");
-            }
-            else {
+            if (previousOffset != null) {
                 LOGGER.info("Found task {} previous offset {}", config.getString(ConfigurationNames.TASK_ID_PROPERTY_NAME), previousOffset);
             }
 
